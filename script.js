@@ -2,6 +2,8 @@ const fetch = require('node-fetch');
 const htmlParser = require('node-html-parser');
 const AWS = require('aws-sdk');
 
+const getLeaders = require('./scores');
+
 const ddb = new AWS.DynamoDB({
   region: 'us-east-1'
 });
@@ -18,22 +20,30 @@ const getPage = () => {
   });
 }
 
-const RATE_THRESHOLD = 50; //pct
 const OWN_TEAM_NAME = 'Qudini';
+
+const TEAMS_TO_AVOID = [
+  'Paddlemy',
+  'Squid One',
+  'Jawfish',
+];
 
 const getBestByServiceType = (entries, serviceType) => {
   const swapcasers = entries.filter((entry) => {
     return entry.data.ServiceType === serviceType && 
-    entry.data.TeamName !== OWN_TEAM_NAME;
-  });
-  const filteredByRate = swapcasers.filter((caser) => {
-    return Number(caser.rate) > RATE_THRESHOLD;
-  });
-  const sortedByDelay = filteredByRate.sort((c1, c2) => {
-    return Number(c1.delay) < Number(c2.delay);
+    entry.data.TeamName !== OWN_TEAM_NAME && !TEAMS_TO_AVOID.includes(entry.data.TeamName);
   });
 
-  return sortedByDelay[0];
+  const sorted = swapcasers.map(sc => {
+    return {
+      ...sc,
+      points: (100 - Number(sc.rate)) + Number(sc.delay),
+    }
+  }).sort((c1, c2) => {
+    return c1.points > c2.points
+  });
+
+  return sorted[0];
 }
 
 const readDDB = () => {
@@ -98,8 +108,8 @@ const putItem = (item) => {
 const updateEntryByServiceType = async(entries, ddbItems, serviceType) => {
   const entry = getBestByServiceType(entries, serviceType);
   if (entry) {
-      await deleteItems(ddbItems.filter(item => item.ServiceType.S === serviceType));
-      await putItem(getBestByServiceType(entries, serviceType));
+      deleteItems(ddbItems.filter(item => item.ServiceType.S === serviceType));
+      putItem(getBestByServiceType(entries, serviceType));
   }
   return Promise.resolve();
 }
@@ -120,17 +130,19 @@ const execute = async() => {
     if (index === 0) {
       return;
     }
-
+    
     entries.push({
       data: {
         "TeamName": tr.childNodes[1].rawText,
-        "Endpoint": trs[1].childNodes[5].rawText,
+        "Endpoint": tr.childNodes[5].rawText,
         "ServiceType": tr.childNodes[3].rawText,
       },
-      delay: trs[1].childNodes[7].rawText,
-      rate: trs[1].childNodes[9].rawText
+      delay: tr.childNodes[7].rawText,
+      rate: tr.childNodes[9].rawText
     });
   });
+
+  console.log('Entries ready');
 
   const response = await readDDB(ddb);
 
