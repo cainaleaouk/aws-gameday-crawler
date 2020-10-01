@@ -1,0 +1,15 @@
+{
+  "name": "awsgameday",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Cai Leao",
+  "license": "MIT",
+  "scripts": {
+    "script": "node ./script.js"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.764.0",
+    "node-fetch": "^2.6.1",
+    "node-html-parser": "^1.2.21"
+  }
+}
