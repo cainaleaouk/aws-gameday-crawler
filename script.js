@@ -95,8 +95,19 @@ const putItem = (item) => {
    });
 }
 
+const updateEntryByServiceType = async(entries, ddbItems, serviceType) => {
+  const entry = getBestByServiceType(entries, serviceType);
+  if (entry) {
+      await deleteItems(ddbItems.filter(item => item.ServiceType.S === serviceType));
+      await putItem(getBestByServiceType(entries, serviceType));
+  }
+  return Promise.resolve();
+}
+
 
 const execute = async() => {
+  console.log('Execute...');
+
   const page = await getPage();
 
   const root = htmlParser.parse(page);
@@ -125,21 +136,9 @@ const execute = async() => {
 
   const items = response.Items;
 
-  const swapcaser = getBestByServiceType(entries, 'swapcaser');
-  if (swapcaser) {
-      await deleteItems(items.filter(item => item.ServiceType.S === 'swapcaser'));
-      await putItem(getBestByServiceType(entries, 'swapcaser'));
-  }
-  const leeter = getBestByServiceType(entries, 'leeter');
-  if (leeter) {
-      await deleteItems(items.filter(item => item.ServiceType.S === 'leeter'));
-      await putItem(getBestByServiceType(entries, 'leeter'));
-  }
-  const reverser = getBestByServiceType(entries, 'reverser');
-  if (reverser) {
-      await deleteItems(items.filter(item => item.ServiceType.S === 'reverser'));
-      await putItem(getBestByServiceType(entries, 'reverser'));
-  }
+  await updateEntryByServiceType(entries, items, 'swapcaser');
+  await updateEntryByServiceType(entries, items, 'leeter');
+  await updateEntryByServiceType(entries, items, 'reverser');
 
   console.log('Done!');
 
