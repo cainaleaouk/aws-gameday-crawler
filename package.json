@@ -5,7 +5,8 @@
   "author": "Cai Leao",
   "license": "MIT",
   "scripts": {
-    "script": "node ./script.js"
+    "script": "node ./script.js",
+    "score": "node ./scores.js"
   },
   "dependencies": {
     "aws-sdk": "^2.764.0",
